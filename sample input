@@ -1,0 +1,148 @@
+!pip install pandas matplotlib scikit-fuzzy openpyxl
+# 2. IMPORT LIBRARIES
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+%matplotlib inline
+
+# 3. LOAD DATASET
+df = pd.read_excel(r"C:\Users\nagak\Downloads\BIG5_DATASET.xlsx")
+
+# Display dataset
+df.head()
+
+traits = ['OPENNESS', 'CONSCIENTIOUSNESS', 'EXTRAVERSION', 'AGREEABLENESS', 'NEUROTICISM']
+
+avg_values = df[traits].mean()
+
+print(avg_values)
+
+# 5. BAR GRAPHS
+
+plt.figure(figsize=(7,5))
+plt.bar(traits, avg_values)
+plt.title("Average Trait Scores")
+plt.xlabel("Traits")
+plt.ylabel("Score")
+plt.show()
+
+ # DEFINE VARIABLES
+
+OPENNESS = ctrl.Antecedent(np.arange(0, 101, 1), 'OPENNESS')
+CONSCIENTIOUSNESS = ctrl.Antecedent(np.arange(0, 101, 1), 'CONSCIENTIOUSNESS')
+EXTRAVERSION = ctrl.Antecedent(np.arange(0, 101, 1), 'EXTRAVERSION')
+AGREEABLENESS = ctrl.Antecedent(np.arange(0, 101, 1), 'AGREEABLENESS')
+NEUROTICISM = ctrl.Antecedent(np.arange(0, 101, 1), 'NEUROTICISM')
+
+CAREER = ctrl.Consequent(np.arange(0, 101, 1), 'CAREER')
+
+# MEMBERSHIP VALUES
+
+# OPENNESS
+OPENNESS['low'] = fuzz.trimf(OPENNESS.universe, [0, 0, 50])
+OPENNESS['medium'] = fuzz.trimf(OPENNESS.universe, [30, 55, 80])
+OPENNESS['high'] = fuzz.trimf(OPENNESS.universe, [60, 100, 100])
+
+# CONSCIENTIOUSNESS
+CONSCIENTIOUSNESS['low'] = fuzz.trimf(CONSCIENTIOUSNESS.universe, [0, 0, 40])
+CONSCIENTIOUSNESS['medium'] = fuzz.trimf(CONSCIENTIOUSNESS.universe, [35, 50, 65])
+CONSCIENTIOUSNESS['high'] = fuzz.trimf(CONSCIENTIOUSNESS.universe, [60, 100, 100])
+
+# EXTRAVERSION
+EXTRAVERSION['low'] = fuzz.trimf(EXTRAVERSION.universe, [0, 0, 45])
+EXTRAVERSION['medium'] = fuzz.trimf(EXTRAVERSION.universe, [30, 50, 70])
+EXTRAVERSION['high'] = fuzz.trimf(EXTRAVERSION.universe, [55, 100, 100])
+
+# AGREEABLENESS
+AGREEABLENESS['low'] = fuzz.trimf(AGREEABLENESS.universe, [0, 0, 50])
+AGREEABLENESS['medium'] = fuzz.trimf(AGREEABLENESS.universe, [40, 60, 80])
+AGREEABLENESS['high'] = fuzz.trimf(AGREEABLENESS.universe, [70, 100, 100])
+
+# NEUROTICISM
+NEUROTICISM['low'] = fuzz.trimf(NEUROTICISM.universe, [0, 0, 35])
+NEUROTICISM['medium'] = fuzz.trimf(NEUROTICISM.universe, [30, 50, 70])
+NEUROTICISM['high'] = fuzz.trimf(NEUROTICISM.universe, [65, 100, 100])
+
+CAREER = ctrl.Consequent(np.arange(0, 101, 1), 'CAREER')
+
+# MEMBERSHIP GRAPH
+
+OPENNESS.view()
+CONSCIENTIOUSNESS.view()
+EXTRAVERSION.view()
+AGREEABLENESS.view()
+NEUROTICISM.view()
+CAREER.view()
+
+CAREER['tech'] = fuzz.trimf(CAREER.universe, [0, 0, 25])
+CAREER['management'] = fuzz.trimf(CAREER.universe, [20, 40, 60])
+CAREER['creative'] = fuzz.trimf(CAREER.universe, [50, 70, 90])
+CAREER['healthcare'] = fuzz.trimf(CAREER.universe, [60, 80, 100])
+CAREER['research'] = fuzz.trimf(CAREER.universe, [75, 90, 100])
+
+# SUGGESTION
+
+rule1 = ctrl.Rule(OPENNESS['high'], CAREER['creative'])
+
+rule2 = ctrl.Rule(CONSCIENTIOUSNESS['high'] & EXTRAVERSION['low'], CAREER['research'])
+
+rule3 = ctrl.Rule(EXTRAVERSION['high'] & AGREEABLENESS['high'], CAREER['management'])
+
+rule4 = ctrl.Rule(AGREEABLENESS['high'] & NEUROTICISM['low'], CAREER['healthcare'])
+
+rule5 = ctrl.Rule(CONSCIENTIOUSNESS['high'] & OPENNESS['medium'], CAREER['tech'])
+
+career_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5])
+career_model = ctrl.ControlSystemSimulation(career_ctrl)
+
+results = []
+
+for i in range(len(df)):
+    career_model.reset()
+
+    career_model.input['OPENNESS'] = df.loc[i, 'OPENNESS'] * 10
+    career_model.input['CONSCIENTIOUSNESS'] = df.loc[i, 'CONSCIENTIOUSNESS'] * 10
+    career_model.input['EXTRAVERSION'] = df.loc[i, 'EXTRAVERSION'] * 10
+    career_model.input['AGREEABLENESS'] = df.loc[i, 'AGREEABLENESS'] * 10
+    career_model.input['NEUROTICISM'] = df.loc[i, 'NEUROTICISM'] * 10
+
+    career_model.compute()
+
+    if career_model.output:  
+        key = list(career_model.output.keys())[0]
+        results.append(career_model.output[key])
+    else:
+        results.append(50)  
+
+df['Career Score'] = results
+
+career_model.input['EXTRAVERSION'] = scale(6)
+
+# Function to scale 1–10 → 0–100
+def scale(x):
+    return x * 10
+
+# New test input (in 1–10 scale)
+career_model.input['OPENNESS'] = scale(7.5)
+career_model.input['CONSCIENTIOUSNESS'] = scale(8)
+career_model.input['EXTRAVERSION'] = scale(6)
+career_model.input['AGREEABLENESS'] = scale(7)
+career_model.input['NEUROTICISM'] = scale(3)
+
+# Compute result
+career_model.compute()
+
+# Output
+score = career_model.output['CAREER']
+print("Career Score:", score)
+
+plt.figure(figsize=(6,4))
+plt.hist(df['Career Score'], bins=10)
+plt.title("Career Score Distribution")
+plt.xlabel("Score")
+plt.ylabel("Frequency")
+plt.show()
