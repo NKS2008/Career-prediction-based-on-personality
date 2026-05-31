@@ -1,0 +1,92 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
+
+df = pd.read_csv(r"C:\Users\nagak\Downloads\data-final.csv", sep="\t")
+
+# Take small portion (faster)
+df = df.head(5000)
+
+# Remove missing values
+df = df.dropna()
+
+X = df.iloc[:, 0:50]
+y = (df.iloc[:, 0:10].mean(axis=1) > 3).astype(int)
+
+# Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Models
+dt = DecisionTreeClassifier()
+svm = SVC()
+ann = MLPClassifier(max_iter=300)
+
+# Train
+dt.fit(X_train, y_train)
+svm.fit(X_train, y_train)
+ann.fit(X_train, y_train)
+
+# Predict
+dt_pred = dt.predict(X_test)
+svm_pred = svm.predict(X_test)
+ann_pred = ann.predict(X_test)
+
+# Accuracy
+dt_acc = accuracy_score(y_test, dt_pred) * 100
+svm_acc = accuracy_score(y_test, svm_pred) * 100
+ann_acc = accuracy_score(y_test, ann_pred) * 100
+
+print("Decision Tree:", dt_acc)
+print("SVM:", svm_acc)
+print("ANN:", ann_acc)
+
+#graph
+plt.figure()
+plt.bar(['DT', 'SVM', 'ANN'], [dt_acc, svm_acc, ann_acc])
+plt.xlabel("Models")
+plt.ylabel("Accuracy (%)")
+plt.title("Model Comparison")
+plt.show()
+
+
+# PERSONALITY ANALYSIS
+EXT = df.iloc[:, 0:10].mean().mean()
+EST = df.iloc[:, 10:20].mean().mean()
+AGR = df.iloc[:, 20:30].mean().mean()
+CSN = df.iloc[:, 30:40].mean().mean()
+OPN = df.iloc[:, 40:50].mean().mean()
+
+traits = ['Extraversion', 'Neuroticism', 'Agreeableness', 'Conscientiousness', 'Openness']
+values = [EXT, EST, AGR, CSN, OPN]
+
+
+# GRAPH 2: BIG FIVE BAR GRAPH
+
+plt.figure()
+plt.bar(traits, values)
+plt.xlabel("Personality Traits")
+plt.ylabel("Average Score")
+plt.title("Big Five Personality Traits")
+plt.xticks(rotation=30)
+plt.show()
+
+# GRAPH 3: PIE CHART
+
+plt.figure()
+plt.pie(values, labels=traits, autopct='%1.1f%%')
+plt.title("Personality Distribution")
+plt.show()
+
+
+# GRAPH 4: HISTOGRAM
+
+plt.figure()
+plt.hist(df.iloc[:, 0:10].mean(axis=1), bins=20)
+plt.xlabel("Extraversion Score")
+plt.ylabel("Frequency")
+plt.title("Extraversion Distribution")
+plt.show()
